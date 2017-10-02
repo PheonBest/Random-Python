@@ -1,10 +1,13 @@
 from bs4 import BeautifulSoup
 import requests
+#http://www.skstream.ws/series/rick-et-morty/saison-1/episode-10/version-francaise
+def printA(url):
+	page = requests.get(url)
+	contents = page.content
+	soup = BeautifulSoup(contents, 'html.parser')
 
-page = requests.get('http://www.jeuxvideo.com/forums/42-51-53326975-259-0-1-0-m6-dossier-tabou-harcelement-sexuel-les-femmes-n-en-peuvent-plus.htm')
-contents = page.content
-soup = BeautifulSoup(contents, 'html.parser')
- 
-#msgList = soup.findAll("div"); 
-msgList = soup.findAll("div", { "class" : "txt-msg  text-enrichi-forum "}) # <-- UN EPSACE POURQUOI JVC
-print(len(msgList))
+	a = soup.findAll("a")
+	for i in range(0, len(a)):
+		print(a[i].text)
+
+printA(input())
