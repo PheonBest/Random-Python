@@ -1,22 +1,21 @@
 from bs4 import BeautifulSoup
 import requests
 
+ 
 page_number = 1; 
-url = "http://www.jeuxvideo.com/forums/42-51-49873942-" + str(page_number) + "-0-1-0-les-depressifs-on-se-regroupe-ici.htm"
+url = "http://www.jeuxvideo.com/forums/42-51-53306780-"+str(page_number)+"-0-1-0-risibank-solution-finale-contre-les-stickers-pirates.htm"
 page = requests.get(url)
 contents = page.content
 soup = BeautifulSoup(contents, 'html.parser')
-
+ 
 
 def refreshUrl():
-	global url
-	global page
-	global contents
-	global soup
-	url = "http://www.jeuxvideo.com/forums/42-51-49873942-" + str(page_number) + "-0-1-0-les-depressifs-on-se-regroupe-ici.htm"
+	global page_number, url, page, contents, soup
+	url = "http://www.jeuxvideo.com/forums/42-51-53306780-"+str(page_number)+"-0-1-0-risibank-solution-finale-contre-les-stickers-pirates.htm"
 	page = requests.get(url)
 	contents = page.content
 	soup = BeautifulSoup(contents, 'html.parser')
+ 
 
 def getAllPost():
 	postList = soup.findAll("div", { "class" : "inner-head-content" });
@@ -40,19 +39,22 @@ def printAllPost():
 			print("\n")
 
 
+def getCommand():
+	global page_number 
+	command = input();
+	print("cmd : " + command)
+	if command == "np": # next page
+		page_number += 1;
+		refreshUrl();
+		printAllPost();
+	if command == "bp" and page_number > 1:
+		page_number -= 1;
+		refreshUrl();
+		printAllPost();
+	elif command == "bp" and page_number <= 1:
+		print("Vous avez atteint la page minimum")
+
+	getCommand();
+
 printAllPost();
-
-'''
-while page_number < 5:
- 	page_number += 1;
- 	refreshUrl();
- 	printAllPost();
-'''
-
-command = input();
-print(command)
-
-if command == "np": # next page
-	page_number += 1;
-	refreshUrl();
-	printAllPost();
+getCommand();
