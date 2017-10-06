@@ -64,7 +64,7 @@ def getCommand():
 		page_number = int(url[47]+url[48]+url[49])
 	if command == "np": # next page
 		if nbr < 10:
-			 
+
 		refreshUrl();
 		printAllPost();
 	if command == "bp":
