@@ -24,13 +24,12 @@ def spam():
 	for i in range(0, 100):
 		typewrite(str(c)+"x"+str(i)+"="+str(i*c))
 		keyboard.press('space')
-		if i % 10 == 0:
-			keyboard.press('enter')
+		keyboard.press('enter')
 	c += 1; 
 
-while (c < 100):
+''' while (c < 100):
 	spam()
-#setInterval(spam, 1)
+ '''
+setInterval(spam, 0.1)
  
-
  
