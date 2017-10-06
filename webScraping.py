@@ -41,7 +41,7 @@ def printAllPost():
 
 
 def getCommand():
-	global page_number, topicList, url
+	global page_number, topicList, url, nbr
 	command = input();
 	print("cmd : " + command)
 	if command[0] == "g" and command[1] == "o":
@@ -58,13 +58,15 @@ def getCommand():
 			printAllPost();
 	if url[48] == '-':
 		page_number = int(url[47])
- 	elif url[49] == '-':
+		print(page_number)
+	elif url[49] == '-':
 		page_number = int(url[47]+url[48])
 	elif url[50] == '-':
 		page_number = int(url[47]+url[48]+url[49])
 	if command == "np": # next page
-		if nbr < 10:
-
+		url = list(url)
+		url[47] = str(int(url[47])+1)
+		url = "".join(url)
 		refreshUrl();
 		printAllPost();
 	if command == "bp":
