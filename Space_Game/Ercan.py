@@ -100,13 +100,16 @@ class Ship:
             self.speed += 0.1;
         if (not pressed_up and self.speed >= 0.1):
             self.speed -= 0.1;
+        if (not pressed_down and self.speed <= 0.1):
+            self.speed += 0.1;
+        if (pressed_down and self.speed >= -5):
+            self.speed -= 0.1;
         if (pressed_left):
             self.angle += 4;
         if (pressed_right):
             self.angle -= 4;
     def returnDir(self):
        self.dir = "";
-       print(self.dirX, self.dirY);
        if (self.dirX <= 5 and self.dirX >= -5 and self.dirY > 0):
         self.dir += "up";
        elif (self.dirX <= 5 and self.dirX >= -5 and self.dirY < 0):
@@ -121,63 +124,60 @@ class Ship:
             bullets.append(Bullet(self.x, self.y, self.angle, 10));
 
 class Asteroid:
-	def __init__(self, x, y, size):
-		self.x = x;
-		self.y = y;
-		self.size = size;
-		# generation des variables aleatoires
-		self.nbrRandom = [];
-		for i in range(16):
-			self.nbrRandom.append(random.randint(0, size))
-		# chaque asteroide est en mouvement dance l'espace, on genere les directions
-		self.moveDir = [random.uniform(-1, 1), random.uniform(-1, 1)]
+    def __init__(self, x, y, size):
+        self.x = x;
+        self.y = y;
+        self.size = size;
+        # generation des variables aleatoires
+        self.nbrRandom = [];
+        for i in range(16):
+            self.nbrRandom.append(random.randint(0, size))
+        # chaque asteroide est en mouvement dance l'espace, on genere les directions
+        self.moveDir = [random.uniform(-1, 1), random.uniform(-1, 1)]
 
-	def refreshPos(self):
-		# generation de la forme de base de l'hexagon
-		self.v1 = [self.x			 , self.y];
-		self.v2 = [self.x+self.size  , self.y-self.size];
-		self.v3 = [self.x+self.size*2, self.y-self.size];
-		self.v4 = [self.x+self.size*3, self.y];
-		self.v5 = [self.x+self.size*3, self.y+self.size];
-		self.v6 = [self.x+self.size*2, self.y+self.size*2];
-		self.v7 = [self.x+self.size  , self.y+self.size*2];
-		self.v8 = [self.x			 , self.y+self.size];
+    def refreshPos(self):
+        # generation de la forme de base de l'hexagon
+        self.v1 = [self.x			 , self.y];
+        self.v2 = [self.x+self.size  , self.y-self.size];
+        self.v3 = [self.x+self.size*2, self.y-self.size];
+        self.v4 = [self.x+self.size*3, self.y];
+        self.v5 = [self.x+self.size*3, self.y+self.size];
+        self.v6 = [self.x+self.size*2, self.y+self.size*2];
+        self.v7 = [self.x+self.size  , self.y+self.size*2];
+        self.v8 = [self.x			 , self.y+self.size];
 
-		# on ajoute nos valeurs aleatoires
-		self.v1[0] += self.nbrRandom[0];
-		self.v1[1] += self.nbrRandom[1];
+        # on ajoute nos valeurs aleatoires
+        self.v1[0] += self.nbrRandom[0];
+        self.v1[1] += self.nbrRandom[1];
 
-		self.v2[0] += self.nbrRandom[2];
-		self.v2[1] += self.nbrRandom[3];
+        self.v2[0] += self.nbrRandom[2];
+        self.v2[1] += self.nbrRandom[3];
 
-		self.v3[0] += self.nbrRandom[4];
-		self.v3[1] += self.nbrRandom[5];
+        self.v3[0] += self.nbrRandom[4];
+        self.v3[1] += self.nbrRandom[5];
 
-		self.v4[0] += self.nbrRandom[6];
-		self.v4[1] += self.nbrRandom[7];
+        self.v4[0] += self.nbrRandom[6];
+        self.v4[1] += self.nbrRandom[7];
 
-		self.v5[0] += self.nbrRandom[8];
-		self.v5[1] += self.nbrRandom[9];
+        self.v5[0] += self.nbrRandom[8];
+        self.v5[1] += self.nbrRandom[9];
 
-		self.v6[0] += self.nbrRandom[10];
-		self.v6[1] += self.nbrRandom[11];
+        self.v6[0] += self.nbrRandom[10];
+        self.v6[1] += self.nbrRandom[11];
 
-		self.v7[0] += self.nbrRandom[12];
-		self.v7[1] += self.nbrRandom[13];
+        self.v7[0] += self.nbrRandom[12];
+        self.v7[1] += self.nbrRandom[13];
 
-		self.v8[0] += self.nbrRandom[14];
-		self.v8[1] += self.nbrRandom[15];
+        self.v8[0] += self.nbrRandom[14];
+        self.v8[1] += self.nbrRandom[15];
 
-	def show(self):
-		pygame.draw.polygon(windowSurface, WHITE, [self.v1, self.v2, self.v3, self.v4, self.v5, self.v6, self.v7, self.v8], 4)
+    def show(self):
+        pygame.draw.polygon(windowSurface, WHITE, [self.v1, self.v2, self.v3, self.v4, self.v5, self.v6, self.v7, self.v8], 4)
 
-	def move(self):
-		self.x += (self.moveDir[0] * 100)/((self.size)*1);
-		self.y += (self.moveDir[1] * 100)/((self.size)*1);
-		'''
-		self.x += self.moveDir[0];
-		self.y += self.moveDir[1];
-		'''
+    def move(self):
+        self.x += (w/2 - self.x)/(self.moveDir[0] * 100)/((self.size)*1);
+        self.y += (h/2 - self.y)/(self.moveDir[1] * 100)/((self.size)*1);
+
 asteroids = [];
 asteroids.append(Asteroid(50, 50, 10));
 bullets = [];
@@ -205,16 +205,6 @@ while True:
     HUD = basicFont.render(ship.returnDir(), 1, (255, 255, 0))
     windowSurface.blit(HUD, (100, 100))
 
-    index_bullet_to_remove = [];
-    for i in range(len(bullets)):
-        bullets[i].refreshPos();
-        bullets[i].show()
-        if (bullets[i].lifetime > 50):
-            index_bullet_to_remove.append(i);
-
-    for i in range(len(index_bullet_to_remove)):
-        bullets.remove( bullets[ index_bullet_to_remove[i] ] );
-
     for i in range(len(asteroids)):
         #pygame.draw.lines(windowSurface, WHITE, False, [[asteroids[i].x, asteroids[i].y], [ship.x, ship.y]], 1)
         asteroids[i].move();
@@ -223,6 +213,32 @@ while True:
         if (asteroids[i].x > -w and asteroids[i].x < w and asteroids[i].y > -h and asteroids[i].y < h):
             ast_already_in_screen = True;
 
+    index_bullet_to_remove = [];
+    index_asteroid_to_remove = [];
+    for i in range(len(bullets)):
+        bullets[i].refreshPos();
+        bullets[i].show()
+        for j in range(len(asteroids)):
+            if (bullets[i].x >= asteroids[j].v1[0] and bullets[i].x <= asteroids[j].v4[0]  and bullets[i].y >= asteroids[j].v2[1] and bullets[i].y <= asteroids[j].v7[1]):
+                index_asteroid_to_remove.append(j);
+                index_bullet_to_remove.append(i);
+
+        if (bullets[i].lifetime > 50 and i not in bullets):
+            index_bullet_to_remove.append(i);
+
+
+
+    for i in range(len(index_bullet_to_remove)):
+        try:
+            bullets.remove(bullets[ index_bullet_to_remove[i]]);
+        except:
+            print(index_bullet_to_remove[i]);
+
+    for i in range(len(index_asteroid_to_remove)):
+        try:
+            asteroids.remove(asteroids[ index_asteroid_to_remove[i]])
+        except :
+            pass;
 
     if (not ast_already_in_screen):
         if (pressed_up):
