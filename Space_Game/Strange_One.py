@@ -1,4 +1,4 @@
-﻿import pygame, sys
+import pygame, sys
 from pygame.locals import *
 import os;
 import random;
@@ -67,7 +67,7 @@ bullets = [];
 class Bullet:
 	def __init__(self, x, y, angle, speed):
 		self.x = x+31
-		self.y = y
+		self.y = y+31
 		self.angle = angle
 		self.speed = speed
 		self.lifetime = 0
@@ -85,12 +85,17 @@ class Ship:
 		self.speed=0;
 		self.dirX = 0;
 		self.dirY = 0;
+		self.last_used = pygame.time.get_ticks()
+		self.cooldown = 200
 		self.img = pygame.image.load('ship.png');
 	def show(self):
 		windowSurface.blit(rot_center(self.img, self.angle),(self.x,self.y));
 	def shoot(self):
 		if (pressed_bar):
-			bullets.append(Bullet(self.x, self.y, self.angle,15));
+			now = pygame.time.get_ticks()
+			if (now - self.last_used >=self.cooldown):
+				self.last_used = now
+				bullets.append(Bullet(self.x, self.y, self.angle,15));
 	def move(self):
 		for i in range(len(asteroids)):
 			asteroids[i].x += (self.x - calculate_new_x(self.x, self.speed, d2r(-(self.angle + 90))));
@@ -100,7 +105,6 @@ class Ship:
 			bullets[i].y += (self.y - calculate_new_y(self.y, self.speed, d2r(-(self.angle + 90))));
 		global score;
 		score=round(score+0.1*self.speed)
-		print(score);
 		if (pressed_up and self.speed <= 10):
 			self.speed += 0.1;
 		if (not pressed_up and self.speed >= 0.1):
@@ -131,6 +135,10 @@ class Asteroid:
 		self.x = x;
 		self.y = y;
 		self.size = size;
+		if (random.randint(0,10)<=8):
+			self.color = WHITE
+		else:
+			self.color = RED
 		# generation des variables aleatoires
 		self.nbrRandom = [];
 		for i in range(16):
@@ -175,11 +183,24 @@ class Asteroid:
 		self.v8[1] += self.nbrRandom[15];
 
 	def show(self):
-		pygame.draw.polygon(windowSurface, WHITE, [self.v1, self.v2, self.v3, self.v4, self.v5, self.v6, self.v7, self.v8], 2)
-
+		pygame.draw.polygon(windowSurface, self.color, [self.v1, self.v2, self.v3, self.v4, self.v5, self.v6, self.v7, self.v8], 2)
 	def move(self):
-		self.x += (self.moveDir[0] * 100)/((self.size)*30);
-		self.y += (self.moveDir[1] * 100)/((self.size)*30);
+		if (self.color == WHITE):
+			self.x += (self.moveDir[0] * 100)/((self.size)*30);
+			self.y += (self.moveDir[1] * 100)/((self.size)*30);
+		else:
+			self.x += (self.moveDir[0] * 100)/((self.size)*30);
+			self.y += (self.moveDir[1] * 100)/((self.size)*30);
+			#Différence des x et différence des y
+			dx, dy = self.x - ship.x, self.y - ship.y
+			#On cherche l'hypoténuse du triangle formé par dx et dy
+			dist = math.hypot(dx, dy)
+
+			dx, dy = dx / dist, dy / dist
+			# move along this normalized vector towards the player at current speed
+			self.x += -100*(dx / self.size)
+			self.y += -100*(dy / self.size)
+
 		'''
 		self.x += self.moveDir[0];
 		self.y += self.moveDir[1];
@@ -194,21 +215,28 @@ pressed_up = False;
 pressed_down = False;
 
 def spawnAsteroids(xMin,xMax, yMin, yMax):
-    for i in range(2):
-        for j in range(2):
-            x = random.randint(xMin, xMax);
-            y = random.randint(yMin, yMax);
-            size = random.randint(1, 60);
-            asteroids.append(Asteroid(x, y, size));
+	for i in range(2):
+		for j in range(2):
+			x = random.randint(xMin, xMax);
+			y = random.randint(yMin, yMax);
+			size = random.randint(1, 80);
+			asteroids.append(Asteroid(x, y, size));
 
 while True:
 	ast_already_in_screen = False;
 	pygame.display.update()
 	windowSurface.fill(BLACK)
 
+	index_bullet_to_remove = [];
 	for i in range(len(bullets)):
 		bullets[i].refreshPos();
-		bullets[i].show();
+		bullets[i].show()
+		if (bullets[i].lifetime > 50):
+			index_bullet_to_remove.append(i);
+
+	for i in range(len(index_bullet_to_remove)):
+		bullets.remove( bullets[ index_bullet_to_remove[i] ] );
+
 	for i in range(len(asteroids)):
 		asteroids[i].move();
 		asteroids[i].refreshPos();
@@ -228,6 +256,7 @@ while True:
 				spawnAsteroids(-w*3, w, -h*2, h*2);
 			if (ship.returnDir() == "right"):
 				spawnAsteroids(w, w*3, -h*2, h*2);
+
 	ship.show();
 	ship.move();
 	ship.shoot();
