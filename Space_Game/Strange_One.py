@@ -1,19 +1,29 @@
-﻿import pygame, sys
+import pygame, sys
 from pygame.locals import *
 import os;
 import random;
 import math;
+import threading
+import time;
 
 #Set up pygame
 pygame.init()
-w = 1000;
-h = 1000;
+w = 1920;
+h = 1080;
 #Set up the window
 windowSurface = pygame.display.set_mode((w, h))
 pygame.display.set_caption('Space Explorer')
 
 myfont = pygame.font.SysFont("monospace", 20, True)
+myfontlow = pygame.font.SysFont("monospace", 10, True)
+myfontup = pygame.font.SysFont("monospace", 30, True)
+
 score=0
+
+images = []
+for file_name in os.listdir('images'):
+    image = pygame.image.load('images' + os.sep + file_name).convert()
+    images.append(image)
 
 BLACK = (0,0,0)
 RED = (255,0,0)
@@ -26,239 +36,384 @@ basicFont = pygame.font.SysFont(None, 48)
 clock = pygame.time.Clock()
 
 windowSurface.fill(BLACK)
-
 #Draw a blue poligon onto the surface
 #pygame.draw.polygon(windowSurface, BLUE, ((250, 0), (500,200),(250,400), (0,200) ))
 #Draw a green poligon onto the surface}}}
 '''
 for i in range(50):
-	x = random.randint(0, w)
-	y = random.randint(0, h)
-	pygame.draw.polygon(windowSurface, WHITE, [[x, y], [x+10, y-10], [x+20, y-10], [x+30, y], [x+30, y+10], [x+20, y+20], [x+10, y+20], [x, y+10]], 1)
+    x = random.randint(0, w)
+    y = random.randint(0, h)
+    pygame.draw.polygon(windowSurface, WHITE, [[x, y], [x+10, y-10], [x+20, y-10], [x+30, y], [x+30, y+10], [x+20, y+20], [x+10, y+20], [x, y+10]], 1)
 for i in range(150):
-	x = random.randint(0, w)
-	y = random.randint(0, h)
-	pygame.draw.polygon(windowSurface, WHITE, [[x+random.randint(-10, 10), y+random.randint(-10, 10)], [x+10+random.randint(-10, 10), y-10+random.randint(-10, 10)], [x+20+random.randint(-10, 10), y-10+random.randint(-10, 10)], [x+30+random.randint(-10, 10), y+random.randint(-10, 10)], [x+30+random.randint(-10, 10), y+10+random.randint(-10, 10)], [x+20+random.randint(-10, 10), y+20+random.randint(-10, 10)], [x+10+random.randint(-10, 10), y+20+random.randint(-10, 10)], [x+random.randint(-10, 10), y+10+random.randint(-10, 10)]], 1)
+    x = random.randint(0, w)
+    y = random.randint(0, h)
+    pygame.draw.polygon(windowSurface, WHITE, [[x+random.randint(-10, 10), y+random.randint(-10, 10)], [x+10+random.randint(-10, 10), y-10+random.randint(-10, 10)], [x+20+random.randint(-10, 10), y-10+random.randint(-10, 10)], [x+30+random.randint(-10, 10), y+random.randint(-10, 10)], [x+30+random.randint(-10, 10), y+10+random.randint(-10, 10)], [x+20+random.randint(-10, 10), y+20+random.randint(-10, 10)], [x+10+random.randint(-10, 10), y+20+random.randint(-10, 10)], [x+random.randint(-10, 10), y+10+random.randint(-10, 10)]], 1)
 '''
 #Draw a red circle onto the surface
 #pygame.draw.circle(windowSurface, RED, (250,200), 125)
+ #Get a pixel array of the surface
+def returnEdgeDist():
+    center = [w/2, h/2];
+    dist_to_CENTER = [math.fabs(ship.x - center[0]), math.fabs(ship.y - center[1])];
+    return  dist_to_CENTER;
 
-#Get a pixel array of the surface
 def rot_center(image, angle):
-	loc = image.get_rect().center
-	rot_sprite = pygame.transform.rotate(image, angle)
-	rot_sprite.get_rect().center = loc
-	return rot_sprite
-def awayFromCenter(x,y):
-	xCenter=w/2;
-	yCenter=h/2;
-	dif=math.sqrt(math.pow(x-xCenter,2)+math.pow(y-yCenter,2))
-	return dif;
-def calculate_new_x(old_x,speedy,angle_in_radians):
-	new_x = old_x + (speedy*math.cos(angle_in_radians))
-	return new_x
-def calculate_new_y(old_y,speedy,angle_in_radians):
-	new_y = old_y + (speedy*math.sin(angle_in_radians))
-	return new_y
+    loc = image.get_rect().center
+    rot_sprite = pygame.transform.rotate(image, angle)
+    rot_sprite.get_rect().center = loc
+    return rot_sprite
+
+def calculate_new_x(old_x,speed,angle_in_radians):
+    new_x = old_x + (speed*math.cos(angle_in_radians))
+    return new_x
+
+def calculate_new_y(old_y,speed,angle_in_radians):
+    new_y = old_y + (speed*math.sin(angle_in_radians))
+    return new_y
+
 def d2r(d):
-	"""Convert degrees into radians."""
-	return math.radians(d)
-bullets = [];
+    """Convert degrees into radians."""
+    return math.radians(d)
+
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self, center, size):
+        pygame.sprite.Sprite.__init__(self)
+        self.size = size
+        self.image = images[0]
+        self.rect = self.image.get_rect()
+        self.rect.center = center
+        self.frame = 0
+        self.last_update = pygame.time.get_ticks()
+        self.frame_rate = 50
+
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > self.frame_rate:
+            self.last_update = now
+            self.frame += 1
+            if self.frame == len(images):
+                self.kill()
+            else:
+                center = self.rect.center
+                self.image = images[self.frame]
+                self.rect = self.image.get_rect()
+                self.rect.center = center
+
 class Bullet:
-	def __init__(self, x, y, angle, speed):
-		self.x = x+31
-		self.y = y
-		self.angle = angle
-		self.speed = speed
-		self.lifetime = 0
-	def show(self):
-		pygame.draw.circle(windowSurface, WHITE, (int(self.x), int(self.y)), 2, 0);
-		#pygame.draw.line(windowSurface, WHITE, (self.x,self.y), (self.x,self.y), 2)
-	def refreshPos(self):
-		self.x += (self.x - calculate_new_x(self.x, self.speed, d2r(-(self.angle-90))));
-		self.y += (self.y - calculate_new_y(self.y, self.speed, d2r(-(self.angle-90))));
+    def __init__(self, x, y, angle, speed):
+        self.x = x+31
+        self.y = y+31
+        self.angle = angle
+        self.speed = speed
+        self.lifetime = 0
+    def show(self):
+        self.lifetime += 1;
+        pygame.draw.circle(windowSurface, WHITE, (int(self.x), int(self.y)), 2, 0);
+    def refreshPos(self):
+        self.x += (self.x - calculate_new_x(self.x, self.speed, d2r(-(self.angle-90))));
+        self.y += (self.y - calculate_new_y(self.y, self.speed, d2r(-(self.angle-90))));
+
 class Ship:
-	def __init__(self, x, y):
-		self.x = x;
-		self.y = y;
-		self.angle = 0;
-		self.speed=0;
-		self.dirX = 0;
-		self.dirY = 0;
-		self.img = pygame.image.load('ship.png');
-	def show(self):
-		windowSurface.blit(rot_center(self.img, self.angle),(self.x,self.y));
-	def shoot(self):
-		if (pressed_bar):
-			bullets.append(Bullet(self.x, self.y, self.angle,15));
-	def move(self):
-		for i in range(len(asteroids)):
-			asteroids[i].x += (self.x - calculate_new_x(self.x, self.speed, d2r(-(self.angle + 90))));
-			asteroids[i].y += (self.y - calculate_new_y(self.y, self.speed, d2r(-(self.angle + 90))));
-		for i in range(len(bullets)):
-			bullets[i].x += (self.x - calculate_new_x(self.x, self.speed, d2r(-(self.angle + 90))));
-			bullets[i].y += (self.y - calculate_new_y(self.y, self.speed, d2r(-(self.angle + 90))));
-		global score;
-		score=round(score+0.1*self.speed)
-		print(score);
-		if (pressed_up and self.speed <= 10):
-			self.speed += 0.1;
-		if (not pressed_up and self.speed >= 0.1):
-			self.speed -= 0.1;
-		if (not pressed_down and self.speed <= 0.1):
-			self.speed += 0.1;
-		if (pressed_down and self.speed >= -5):
-			self.speed -= 0.1;
-		if (pressed_left):
-			self.angle += 5;
-		if (pressed_right):
-			self.angle -= 5;
-	def returnDir(self):
-		self.dir = "";
-		print(self.dirX, self.dirY);
-		if (self.dirX <= 5 and self.dirX >= -5 and self.dirY > 0):
-			self.dir += "up";
-		elif (self.dirX <= 5 and self.dirX >= -5 and self.dirY < 0):
-			self.dir += "down";
-		if (self.dirX <= 11 and self.dirX >= -5 and self.dirY <= 5 and self.dirY >= -5):
-			self.dir += "left";
-		elif (self.dirX >= -11 and self.dirX <= -5 and self.dirY <= 5 and self.dirY >= -5):
-			self.dir += "right";
-		return self.dir;
+    def __init__(self, x, y):
+        self.x = x;
+        self.y = y;
+        self.angle = 0;
+        self.speed= 0;
+        self.vel = 0.1;
+        self.img = pygame.image.load('ship.png');
+        self.dirX = 0;
+        self.dirY = 0;
+        self.last_used = pygame.time.get_ticks()
+        self.cooldown = 200
+    def show(self):
+        windowSurface.blit(rot_center(self.img, self.angle),(self.x,self.y));
+    def move(self):
+        #print(int(self.dirX), int(self.dirY))
+        if (self.angle > 360):
+            self.angle = 0;
+        if (self.angle < 0):
+            self.angle = 360;
+        for i in range(len(asteroids)):
+            self.dirX = (self.x - calculate_new_x(self.x, self.speed, d2r(-(self.angle + 90))));
+            self.dirY = (self.y - calculate_new_y(self.y, self.speed, d2r(-(self.angle + 90))));
+            asteroids[i].x += self.dirX;
+            asteroids[i].y += self.dirY;
+        global score;
+        score=score+0.1*self.speed
+        if (pressed_up and self.speed <= 10):
+            self.speed += 0.1;
+        if (not pressed_up and self.speed >= 0.1):
+            self.speed -= 0.1;
+        if (not pressed_down and self.speed <= 0.1):
+            self.speed += 0.1;
+        if (pressed_down and self.speed >= -5):
+            self.speed -= 0.1;
+        if (pressed_left):
+            self.angle += 4;
+        if (pressed_right):
+            self.angle -= 4;
+    def returnDir(self):
+        self.dir = "";
+        if (self.dirX <= 5 and self.dirX >= -5 and self.dirY > 0):
+            self.dir = "up";
+        elif (self.dirX <= 5 and self.dirX >= -5 and self.dirY < 0):
+            self.dir = "down";
+        if (self.dirX <= 11 and self.dirX >= -5 and self.dirY <= 5 and self.dirY >= -5):
+            self.dir = "left";
+        elif (self.dirX >= -11 and self.dirX <= -5 and self.dirY <= 5 and self.dirY >= -5):
+            self.dir = "right";
+        return self.dir;
+    def shoot(self):
+        if (pressed_bar):
+            now = pygame.time.get_ticks()
+            if (now - self.last_used >= self.cooldown):
+                self.last_used = now
+                bullets.append(Bullet(self.x, self.y, self.angle, 15));
 
 class Asteroid:
-	def __init__(self, x, y, size):
-		self.x = x;
-		self.y = y;
-		self.size = size;
-		# generation des variables aleatoires
-		self.nbrRandom = [];
-		for i in range(16):
-			self.nbrRandom.append(random.randint(0, size))
-		# chaque asteroide est en mouvement dance l'espace, on genere les directions
-		self.moveDir = [random.uniform(-1, 1), random.uniform(-1, 1)]
+    def __init__(self, x, y, size):
+        self.x = x;
+        self.y = y;
+        self.size = size;
+        self.maxlifetime = round(size/20)
+        self.lifetime = self.maxlifetime
+        self.dist = 1;
+        # generation des variables aleatoires
+        self.nbrRandom = [];
+        for i in range(16):
+            self.nbrRandom.append(random.randint(0, size))
 
-	def refreshPos(self):
-		# generation de la forme de base de l'hexagon
-		self.v1 = [self.x			 , self.y];
-		self.v2 = [self.x+self.size  , self.y-self.size];
-		self.v3 = [self.x+self.size*2, self.y-self.size];
-		self.v4 = [self.x+self.size*3, self.y];
-		self.v5 = [self.x+self.size*3, self.y+self.size];
-		self.v6 = [self.x+self.size*2, self.y+self.size*2];
-		self.v7 = [self.x+self.size  , self.y+self.size*2];
-		self.v8 = [self.x			 , self.y+self.size];
+        self.refreshPos();
+        if (random.randint(0, 10) <= 8):
+            self.color = WHITE
+        else:
+            self.color = RED
+        # chaque asteroide est en mouvement dance l'espace, on genere les directions
+        self.moveDir = [random.uniform(-1, 1), random.uniform(-1, 1)]
 
-		# on ajoute nos valeurs aleatoires
-		self.v1[0] += self.nbrRandom[0];
-		self.v1[1] += self.nbrRandom[1];
+    def refreshPos(self):
+        # generation de la forme de base de l'hexagon
+        self.v1 = [self.x             , self.y];
+        self.v2 = [self.x+self.size  , self.y-self.size];
+        self.v3 = [self.x+self.size*2, self.y-self.size];
+        self.v4 = [self.x+self.size*3, self.y];
+        self.v5 = [self.x+self.size*3, self.y+self.size];
+        self.v6 = [self.x+self.size*2, self.y+self.size*2];
+        self.v7 = [self.x+self.size  , self.y+self.size*2];
+        self.v8 = [self.x             , self.y+self.size];
 
-		self.v2[0] += self.nbrRandom[2];
-		self.v2[1] += self.nbrRandom[3];
+        # on ajoute nos valeurs aleatoires
+        self.v1[0] += self.nbrRandom[0];
+        self.v1[1] += self.nbrRandom[1];
 
-		self.v3[0] += self.nbrRandom[4];
-		self.v3[1] += self.nbrRandom[5];
+        self.v2[0] += self.nbrRandom[2];
+        self.v2[1] += self.nbrRandom[3];
 
-		self.v4[0] += self.nbrRandom[6];
-		self.v4[1] += self.nbrRandom[7];
+        self.v3[0] += self.nbrRandom[4];
+        self.v3[1] += self.nbrRandom[5];
 
-		self.v5[0] += self.nbrRandom[8];
-		self.v5[1] += self.nbrRandom[9];
+        self.v4[0] += self.nbrRandom[6];
+        self.v4[1] += self.nbrRandom[7];
 
-		self.v6[0] += self.nbrRandom[10];
-		self.v6[1] += self.nbrRandom[11];
+        self.v5[0] += self.nbrRandom[8];
+        self.v5[1] += self.nbrRandom[9];
 
-		self.v7[0] += self.nbrRandom[12];
-		self.v7[1] += self.nbrRandom[13];
+        self.v6[0] += self.nbrRandom[10];
+        self.v6[1] += self.nbrRandom[11];
 
-		self.v8[0] += self.nbrRandom[14];
-		self.v8[1] += self.nbrRandom[15];
+        self.v7[0] += self.nbrRandom[12];
+        self.v7[1] += self.nbrRandom[13];
 
-	def show(self):
-		pygame.draw.polygon(windowSurface, WHITE, [self.v1, self.v2, self.v3, self.v4, self.v5, self.v6, self.v7, self.v8], 2)
+        self.v8[0] += self.nbrRandom[14];
+        self.v8[1] += self.nbrRandom[15];
 
-	def move(self):
-		self.x += (self.moveDir[0] * 100)/((self.size)*30);
-		self.y += (self.moveDir[1] * 100)/((self.size)*30);
-		'''
-		self.x += self.moveDir[0];
-		self.y += self.moveDir[1];
-		'''
+    def show(self):
+        pygame.draw.polygon(windowSurface, self.color, [self.v1, self.v2, self.v3, self.v4, self.v5, self.v6, self.v7, self.v8], 4)
+
+    def move(self):
+        if (self.color == WHITE):
+            self.x += (self.moveDir[0] * 100)/((self.size)*1);
+            self.y += (self.moveDir[1] * 100)/((self.size)*1);
+        else :
+            self.x += (self.moveDir[0] * 100) / ((self.size) * 30);
+            self.y += (self.moveDir[1] * 100) / ((self.size) * 30);
+            # Différence des x et différence des y
+            dx, dy = self.x - ship.x, self.y - ship.y
+            # On cherche l'hypoténuse du triangle formé par dx et dy
+            self.dist = math.hypot(dx, dy)
+
+            dx, dy = dx / self.dist, dy / self.dist
+            # move along this normalized vector towards the player at current speed
+            self.x += -100 * (dx / self.size)
+            self.y += -100 * (dy / self.size)
+    def health(self):
+        health = (self.lifetime * self.size / self.maxlifetime)/10
+        print(health);
+        pygame.draw.rect(windowSurface, GREEN, (self.x-self.size/3, self.y-self.size, health*(self.v4[0]-self.v1[0])/3, self.size/3))
+
 asteroids = [];
-
-ship = Ship(w/2, h/2);
-pressed_bar = False;
-pressed_left = False;
-pressed_right = False;
-pressed_up = False;
-pressed_down = False;
+bullets = [];
 
 def spawnAsteroids(xMin,xMax, yMin, yMax):
     for i in range(2):
         for j in range(2):
             x = random.randint(xMin, xMax);
             y = random.randint(yMin, yMax);
-            size = random.randint(1, 60);
+            size = random.randint(20, 100);
             asteroids.append(Asteroid(x, y, size));
 
+
+spawnAsteroids(0, w, 0, h);
+ship = Ship(w/2, h/2);
+pressed_left = False;
+pressed_right = False;
+pressed_up = False;
+pressed_down = False;
+pressed_bar = False;
+
+SCORE_COOLDOWN = 1000;
+SCORE_UP_AMOUNT = 0;
+SCORE_UP_SHOW = False;
+def scoreUpToFalse():
+    global SCORE_UP_SHOW
+    SCORE_UP_SHOW = False;
+def set_timeout(func, sec):
+    t = None
+    def func_wrapper():
+        func()
+        t.cancel()
+    t = threading.Timer(sec, func_wrapper)
+    t.start()
+
+all_sprites = pygame.sprite.Group()
+
 while True:
-	ast_already_in_screen = False;
-	pygame.display.update()
-	windowSurface.fill(BLACK)
+    all_sprites.update()
+    global score;
+    ast_already_in_screen = False;
+    pygame.display.update()
+    windowSurface.fill(BLACK)
+    for i in range(len(asteroids)):
+        #pygame.draw.lines(windowSurface, WHITE, False, [[asteroids[i].x, asteroids[i].y], [ship.x, ship.y]], 1)
+        asteroids[i].move();
+        asteroids[i].refreshPos();
+        asteroids[i].show();
+        if (asteroids[i].maxlifetime != asteroids[i].lifetime):
+            asteroids[i].health();
+        distFromCenterX = w/2 - asteroids[i].x;
+        distFromCenterY = h/2 - asteroids[i].y;
+        if (asteroids[i].x < 0):
+            pygame.draw.circle(windowSurface, asteroids[i].color, (0, int(asteroids[i].y)), int(math.fabs(distFromCenterX)/100), 1);
+        elif (asteroids[i].x > w):
+            pygame.draw.circle(windowSurface, asteroids[i].color, (w-10, int(asteroids[i].y)), int(math.fabs(distFromCenterX)/100), 1);
+        elif (asteroids[i].y < 0):
+            pygame.draw.circle(windowSurface, asteroids[i].color, (int(asteroids[i].x), 10), int(math.fabs(distFromCenterY)/100), 1);
+        elif (asteroids[i].y > h):
+            pygame.draw.circle(windowSurface, asteroids[i].color, (int(asteroids[i].x), h-10), int(math.fabs(distFromCenterY)/100), 1);
 
-	for i in range(len(bullets)):
-		bullets[i].refreshPos();
-		bullets[i].show();
-	for i in range(len(asteroids)):
-		asteroids[i].move();
-		asteroids[i].refreshPos();
-		asteroids[i].show();
-		if (asteroids[i].x > -w and asteroids[i].x < w and asteroids[i].y > -h and asteroids[i].y < h):
-			ast_already_in_screen = True;
+        if (asteroids[i].x > -w and asteroids[i].x < w and asteroids[i].y > -h and asteroids[i].y < h):
+            ast_already_in_screen = True;
 
-	if (not ast_already_in_screen):
-		if (pressed_up):
-			if (ship.returnDir() == "up"):
-				for i in range(10):
-					spawnAsteroids(-w, w*2, -h*2, 0);
-			if (ship.returnDir() == "down"):
-				for i in range(10):
-					spawnAsteroids(-w, w*2, 0, h*2);
-			if (ship.returnDir() == "left"):
-				spawnAsteroids(-w*3, w, -h*2, h*2);
-			if (ship.returnDir() == "right"):
-				spawnAsteroids(w, w*3, -h*2, h*2);
-	ship.show();
-	ship.move();
-	ship.shoot();
-	for event in pygame.event.get():
-		pressed = pygame.key.get_pressed();
-		if event.type == pygame.KEYDOWN:
-			if event.key == pygame.K_SPACE:
-				pressed_bar = True;
-			if event.key == pygame.K_UP:
-				pressed_up = True;
-			if event.key == pygame.K_DOWN:
-				pressed_down = True;
-			if event.key == pygame.K_RIGHT:
-				pressed_right = True;
-			if event.key == pygame.K_LEFT:
-				pressed_left = True;
-		if event.type == pygame.KEYUP:
-			if event.key == pygame.K_SPACE:
-				pressed_bar = False;
-			if event.key == pygame.K_UP:
-				pressed_up = False;
-			if event.key == pygame.K_DOWN:
-				pressed_down = False;
-			if event.key == pygame.K_RIGHT:
-				pressed_right = False;
-			if event.key == pygame.K_LEFT:
-				pressed_left = False;
-		if event.type == QUIT:
-			pygame.quit()
-			sys.exit()
-	global score;
-	scoretext = myfont.render("DISTANCE: "+str(score), 1, (255,255,255))
-	windowSurface.blit(scoretext, (800, 950))
-	clock.tick(60);
+        if (ship.x + 31< asteroids[i].v4[0] and ship.x + 31 > asteroids[i].v1[0] and ship.y + 31> asteroids[i].v2[1] and ship.y + 31< asteroids[i].v7[1]):
+            #random.choice(expl_sounds).play()
+            xExpl = (asteroids[i].v2[0] + asteroids[i].v3[0])/2
+            yExpl = (asteroids[i].v3[1] + asteroids[i].v5[1])/2
+            expl = Explosion([xExpl,yExpl], asteroids[i].size)
+            all_sprites.add(expl)
+            index_asteroid_to_remove.append(i);
+    index_bullet_to_remove = [];
+    index_asteroid_to_remove = [];
+    for i in range(len(bullets)):
+        bullets[i].refreshPos();
+        bullets[i].show()
+        for j in range(len(asteroids)):
+            if (bullets[i].x >= asteroids[j].v1[0] and bullets[i].x <= asteroids[j].v4[0]  and bullets[i].y >= asteroids[j].v2[1] and bullets[i].y <= asteroids[j].v7[1]):
+                #random.choice(expl_sounds).play()
+                if (asteroids[j].lifetime==1):
+                    xExpl = (asteroids[j].v2[0] + asteroids[j].v3[0])/2
+                    yExpl = (asteroids[j].v3[1] + asteroids[j].v5[1])/2
+                    expl = Explosion([xExpl,yExpl], asteroids[j].size)
+                    all_sprites.add(expl)
+                    index_asteroid_to_remove.append(j);
+
+                    last_up=10*asteroids[j].size
+                    score+=last_up
+                    SCORE_UP_SHOW = True;
+                    set_timeout(scoreUpToFalse, 1)
+
+                    if (asteroids[j].size/2 > 20):
+                        asteroids.append(Asteroid(asteroids[j].x, asteroids[j].y, int(asteroids[j].size/2)));
+                else:
+                    asteroids[j].lifetime-=1
+                index_bullet_to_remove.append(i);
+
+        if (bullets[i].lifetime > 70 and i not in bullets):
+            index_bullet_to_remove.append(i);
+
+    for i in range(len(index_bullet_to_remove)):
+        try:
+            bullets.remove(bullets[ index_bullet_to_remove[i]]);
+        except:
+            continue
+            print(index_bullet_to_remove[i]);
+
+    for i in range(len(index_asteroid_to_remove)):
+        try:
+            asteroids.remove(asteroids[ index_asteroid_to_remove[i]])
+        except:
+            asteroids = [];
+            spawnAsteroids(-w*2, w/2, -h*2, -h)
+            pass;
+
+    if (not ast_already_in_screen):
+        if (pressed_up):
+            if (ship.returnDir() == "up"):
+                for i in range(10):
+                    spawnAsteroids(-w, w*2, -h*2, 0);
+            if (ship.returnDir() == "down"):
+                for i in range(10):
+                    spawnAsteroids(-w, w*2, 0, h*2);
+            if (ship.returnDir() == "left"):
+                spawnAsteroids(-w*3, w, -h*2, h*2);
+            if (ship.returnDir() == "right"):
+                spawnAsteroids(w, w*3, -h*2, h*2);
+
+    ship.show();
+    ship.move();
+    ship.shoot();
+    for event in pygame.event.get():
+        pressed = pygame.key.get_pressed();
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                pressed_up = True;
+            if event.key == pygame.K_DOWN:
+                pressed_down = True;
+            if event.key == pygame.K_RIGHT:
+                pressed_right = True;
+            if event.key == pygame.K_LEFT:
+                pressed_left = True;
+            if event.key == pygame.K_SPACE:
+                pressed_bar = True;
+
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_UP:
+                pressed_up = False;
+            if event.key == pygame.K_DOWN:
+                pressed_down = False;
+            if event.key == pygame.K_RIGHT:
+                pressed_right = False;
+            if event.key == pygame.K_LEFT:
+                pressed_left = False;
+            if event.key == pygame.K_SPACE:
+                pressed_bar = False;
+        if event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+    scoretext = myfont.render("SCORE: "+str(round(score)), 1, (255,255,255))
+    windowSurface.blit(scoretext, (w-200, h-50))
+    HUD = myfontlow.render(ship.returnDir(), 1, (255,255,255))
+    windowSurface.blit(HUD, (10, 10))
+    if (SCORE_UP_SHOW):
+        SCORE_UP = myfontup.render("+ "+str(last_up), 1, (77,255,77))
+        windowSurface.blit(SCORE_UP, (w-200, h-100))
+    clock.tick(60);
