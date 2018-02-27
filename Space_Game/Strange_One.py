@@ -15,8 +15,8 @@ windowSurface = pygame.display.set_mode((w, h), FULLSCREEN)
 pygame.display.set_caption('Space Explorer')
 
 myfont1 = pygame.font.SysFont("monospace", 30, True)
-myfont2 = pygame.font.Font(os.path.join('pixelart.ttf'), 22)
-myfont3 = pygame.font.Font(os.path.join('pixelart.ttf'), 16)
+myfont2 = pygame.font.Font(os.path.join('pixelart.ttf'), 30)
+myfont3 = pygame.font.Font(os.path.join('pixelart.ttf'), 22)
 myfont4 = pygame.font.SysFont("monospace", 26, True)
 
 score=0
@@ -119,7 +119,7 @@ for file_name in os.listdir('images'):
         i+=1
         currentUpdate()
         progress(current, fileNumber_total, image, str(i) + '.' + fileN[len(fileN)-3] + fileN[len(fileN)-2] + fileN[len(fileN)-1])
-        time.sleep(0.0001)
+        #time.sleep(0.000001)
 
 planets_images = []
 planets_images.append([])
@@ -149,7 +149,7 @@ for file_name in os.listdir('planets'):
         i+=1
         currentUpdate()
         progress(current, fileNumber_total, image, str(i) + '.' + fileN[len(fileN)-3] + fileN[len(fileN)-2] + fileN[len(fileN)-1])
-        time.sleep(0.0001)
+        #time.sleep(0.000001)
 
 class Explosion:
     def __init__(self, x, y, size):
@@ -181,7 +181,7 @@ class Bullet:
         self.lifetime = 0
     def show(self):
         self.lifetime += 1;
-        pygame.draw.circle(windowSurface, WHITE, (int(self.x), int(self.y)), 2, 0);
+        pygame.draw.circle(windowSurface, WHITE, (int(self.x), int(self.y)), 4, 0);
     def refreshPos(self):
         self.x += (self.x - calculate_new_x(self.x, self.speed, d6r(-(self.angle-90))));
         self.y += (self.y - calculate_new_y(self.y, self.speed, d6r(-(self.angle-90))));
@@ -200,6 +200,7 @@ class Ship:
         self.cooldown = 200
         self.maxSpeed = 12;
         self.rotate = False;
+        self.altitude = 0;
     def show(self):
         windowSurface.blit(rot_center(self.img, self.angle),(self.x,self.y));
     def move(self):
@@ -226,6 +227,10 @@ class Ship:
         for i in range(len(stars)):
             stars[i].x += ((self.dirX * stars[i].z)/2000)*30;
             stars[i].y += ((self.dirY * stars[i].z)/2000)*30;
+        for i in range(len(ground.posX)):
+            ground.posX[i] += self.dirX;
+            ground.posY[i] += self.dirY;
+        self.altitude = int(ground.posY[0]-h/2-70);
         global score;
         score=score+0.1*self.speed
         if (pressed_up and self.speed <= self.maxSpeed):
@@ -257,9 +262,9 @@ class Ship:
             if (now - self.last_used >= self.cooldown):
                 self.last_used = now
                 bullets.append(Bullet(self.x, self.y, self.angle, 20));
-    def notControlable(self):
-        self.dirX = -self.dirX
-        self.dirY = -self.dirY;
+    def notControlable(self, intensity):
+        self.dirX = -intensity*self.dirX
+        self.dirY = -intensity*self.dirY;
     def rotateSetTo(self, boole):
         self.rotate = boole;
 
@@ -413,7 +418,7 @@ class Planet:
         self.y = y
         self.frame = 0
         self.last_update = pygame.time.get_ticks()
-        self.frame_rate = 20
+        self.frame_rate = 30
     def update(self):
         now = pygame.time.get_ticks()
         # Différence des x et différence des y
@@ -431,7 +436,6 @@ class Planet:
                 self.frame += 1
                 if (self.frame == len(self.list)):
                     self.frame = 0
-                print(self.frame)
                 self.image= pygame.transform.scale(self.list[self.frame], (self.size_X, self.size_Y))
 class Star:
     def __init__(self, x, y, z):
@@ -458,7 +462,7 @@ class Minimap:
         self.zoomW = render_distance[0]
         self.zoomH = render_distance[1]
     def show(self):
-        pygame.draw.rect(windowSurface, [50, 50, 0], (self.x, self.y, self.size, self.size), 12);
+        pygame.draw.rect(windowSurface, [255, 255, 255], (self.x, self.y, self.size, self.size), 12);
         windowSurface.fill(BLACK, rect=[self.x, self.y,  self.size,  self.size])
 
         pX = self.size/2
@@ -481,6 +485,32 @@ class Minimap:
                     size = map(planets[i].size, 0, max_ast_size, 1, 6);
                     pygame.draw.circle(windowSurface, GREEN, (int(x*3.32/3.425), int(y*3.32/3.425)), int(size));
 
+class Ground:
+    def __init__(self, x, y):
+        self.x = x;
+        self.y = y;
+
+        self.posX = [];
+        self.posY = [];
+
+        for i in range(1000):
+            self.posX.append(10*i);
+            self.posY.append(5*h/6+random.randint(-5, 5))
+
+    def show(self):
+        if self.posY[0]-70<= h/2:
+            ship.speed = -1*ship.speed;
+        for i in range(len(self.posX)):
+            if (self.posX[i] > w):
+                self.posX[i] = 0
+            if (self.posX[i] < 0):
+                self.posX[i] = w;
+            try:
+                pygame.draw.circle(windowSurface, (255, 255, 255), (int(self.posX[i]), int(self.posY[i])), 3)
+            except:
+                pass;
+        # pygame.draw.polygon(windowSurface, [255, 255, 255], [[0, h], [w/2, h-100], [w, h]], 5)
+
 stars = [];
 explosions = [];
 asteroids = [];
@@ -488,7 +518,7 @@ bullets = [];
 planets = [];
 rdm = 6
 render_distance = [w*rdm, h*rdm]
-minimap = Minimap(0, 0);
+minimap = Minimap(0,0);
 
 min_ast_size = 40;
 max_ast_size = 120;
@@ -499,13 +529,15 @@ def spawnAsteroids(xMin,xMax, yMin, yMax):
             x = random.randint(xMin, xMax);
             y = random.randint(yMin, yMax);
             size = random.randint(min_ast_size, max_ast_size);
-            asteroids.append(Asteroid(x, y, size));
-for i in range(80):
-    planets.append(Planet(random.randint(-w*50, w*50), random.randint(-h*50, h*50), random.randint(500, 900)));
-for i in range(1000):
-            stars.append(Star(random.randint(0, w), random.randint(0, h), random.randint(1, 140)))
+            if y < 2*h:
+                asteroids.append(Asteroid(x, y, size));
+#for i in range(80):
+    #planets.append(Planet(random.randint(-w*50, w*50), random.randint(-h*100, -h), random.randint(500, 750)));
+#for i in range(1000):
+    #stars.append(Star(random.randint(0, w), random.randint(0, h), random.randint(1, 140)))
 
-spawnAsteroids(0, w, 0, h);
+asteroids.append(Asteroid(w/2, -10*h, 40));
+ground = Ground(0,0);
 ship = Ship(w/2, h/2);
 pressed_left = False;
 pressed_right = False;
@@ -535,6 +567,11 @@ while True:
     index_bullet_to_remove = [];
     index_asteroid_to_remove = [];
     index_explosion_to_remove = [];
+
+    if (ship.altitude > 3000 and len(stars) < 100):
+         stars.append(Star(random.randint(0, w), random.randint(0, h), random.randint(1, 140)))
+    if (ship.altitude > 10000 and len(planets) < 80):
+        planets.append(Planet(random.randint(-w*50, w*50), random.randint(-h*100, -h*4), random.randint(500, 1000)));
 
     for i in range(len(explosions)):
         explosions[i].update();
@@ -592,6 +629,11 @@ while True:
 
         if (asteroids[i].x > -w and asteroids[i].x < w and asteroids[i].y > -h and asteroids[i].y < h):
             ast_already_in_screen = True;
+            if (ground.posY[0] <= asteroids[i].v2[1] or ground.posY[0] <= asteroids[i].v7[1]):
+                xExpl = asteroids[i].x+asteroids[i].size
+                yExpl = asteroids[i].y-2/asteroids[i].size
+                explosions.append(Explosion(xExpl,yExpl,asteroids[i].size));
+                index_asteroid_to_remove.append(i);
 
         if (ship.x + 31< asteroids[i].v4[0] and ship.x + 31 > asteroids[i].v1[0] and ship.y + 31> asteroids[i].v2[1] and ship.y + 31< asteroids[i].v7[1]):
             #random.choice(expl_sounds).play()
@@ -603,7 +645,7 @@ while True:
                     asteroids.append(Asteroid(asteroids[i].x, asteroids[i].y, int(asteroids[i].size/1.8)));
             index_asteroid_to_remove.append(i);
             ship.rotateSetTo(True);
-            ship.notControlable();
+            ship.notControlable(0.5);
             last_up=-10*asteroids[i].size
             if ((score+last_up)<=0):
                 score=0;
@@ -660,22 +702,21 @@ while True:
             pass;
 
     if (not ast_already_in_screen):
-        if (pressed_up):
+        if (pressed_up and ship.altitude > 6000):
             if (ship.returnDir() == "up"):
-                for i in range(8):
-                    spawnAsteroids(-render_distance[0], render_distance[0], -render_distance[1], 0);
+                for i in range(2):
+                    spawnAsteroids(-render_distance[0], render_distance[0]/2, -render_distance[1], 0);
             if (ship.returnDir() == "down"):
-                for i in range(8):
-                    spawnAsteroids(-render_distance[0], render_distance[0], 0, render_distance[1]);
+                for i in range(2):
+                    spawnAsteroids(-render_distance[0], render_distance[0], 1000, render_distance[1]);
             if (ship.returnDir() == "left"):
-                for i in range(4):
-                    spawnAsteroids(-render_distance[0], render_distance[0], -render_distance[1], render_distance[1]);
+                spawnAsteroids(-render_distance[0], render_distance[0], -render_distance[1], render_distance[1]);
             if (ship.returnDir() == "right"):
-                for i in range(4):
-                    spawnAsteroids(-render_distance[0], render_distance[0], -render_distance[1], render_distance[1]);
+                spawnAsteroids(-render_distance[0], render_distance[0], -render_distance[1], render_distance[1]);
     ship.show();
     ship.move();
     ship.shoot();
+    ground.show();
     for i in range(len(stars)):
         stars[i].x += stars[i].z/1000;
         stars[i].y += stars[i].z/1000;
@@ -721,11 +762,13 @@ while True:
             pygame.display.quit()
             pygame.quit()
             sys.exit()
-    scoretext = myfont2.render("SCORE  "+str(round(score)), 1, WHITE)
+    scoretext = myfont2.render("SCORE: "+str(round(score)), 1, (77,255,77))
     windowSurface.blit(scoretext, (w-200, h-110))
-    DIRECTION = myfont2.render(ship.returnDir(), 1, (77,255,77))
-    windowSurface.blit(DIRECTION, (20, minimap.size+25))
-    HUD = myfont3.render("FPS  "+str(round(clock.get_fps(), 2)), 1, WHITE)
+    ALTITUDE = myfont2.render('ALTITUDE: ' + str(ship.altitude), 1, (77,255,77))
+    windowSurface.blit(ALTITUDE, (20, minimap.size+25))
+    DIRECTION = myfont2.render('DIRECTION: ' + ship.returnDir(), 1, (77,255,77))
+    windowSurface.blit(DIRECTION, (20, minimap.size+55))
+    HUD = myfont3.render("FPS: "+str(round(clock.get_fps(), 2)), 1, WHITE)
     windowSurface.blit(HUD, (w-200, h-70))
     if (SCORE_UP_SHOW):
         if (last_up<=0):
