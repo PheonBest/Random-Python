@@ -8,15 +8,16 @@ import time;
 
 #Set up pygame
 pygame.init()
-w = 1960;
-h = 1080;
+w = 1920
+h = 1080
 #Set up the window
-windowSurface = pygame.display.set_mode((w, h))
+windowSurface = pygame.display.set_mode((w, h), FULLSCREEN)
 pygame.display.set_caption('Space Explorer')
 
 myfont1 = pygame.font.SysFont("monospace", 30, True)
 myfont2 = pygame.font.Font(os.path.join('pixelart.ttf'), 22)
 myfont3 = pygame.font.Font(os.path.join('pixelart.ttf'), 16)
+myfont4 = pygame.font.SysFont("monospace", 26, True)
 
 score=0
 
@@ -31,22 +32,21 @@ basicFont = pygame.font.SysFont(None, 48)
 clock = pygame.time.Clock()
 
 windowSurface.fill(BLACK)
-#Draw a blue poligon onto the surface
-#pygame.draw.polygon(windowSurface, BLUE, ((650, 0), (500,600),(650,400), (0,600) ))
-#Draw a green poligon onto the surface}}}
-'''
-for i in range(50):
-    x = random.randint(0, w)
-    y = random.randint(0, h)
-    pygame.draw.polygon(windowSurface, WHITE, [[x, y], [x+10, y-10], [x+60, y-10], [x+30, y], [x+30, y+10], [x+60, y+60], [x+10, y+60], [x, y+10]], 1)
-for i in range(150):
-    x = random.randint(0, w)
-    y = random.randint(0, h)
-    pygame.draw.polygon(windowSurface, WHITE, [[x+random.randint(-10, 10), y+random.randint(-10, 10)], [x+10+random.randint(-10, 10), y-10+random.randint(-10, 10)], [x+60+random.randint(-10, 10), y-10+random.randint(-10, 10)], [x+30+random.randint(-10, 10), y+random.randint(-10, 10)], [x+30+random.randint(-10, 10), y+10+random.randint(-10, 10)], [x+60+random.randint(-10, 10), y+60+random.randint(-10, 10)], [x+10+random.randint(-10, 10), y+60+random.randint(-10, 10)], [x+random.randint(-10, 10), y+10+random.randint(-10, 10)]], 1)
-'''
-#Draw a red circle onto the surface
-#pygame.draw.circle(windowSurface, RED, (650,600), 165)
- #Get a pixel array of the surface
+
+def rotate(origin, point, angle):
+    """
+    Rotate a point counterclockwise by a given angle around a given origin.
+
+    The angle should be given in radians.
+    """
+    ox, oy = origin
+    px, py = point
+
+    qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
+    qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
+
+    return qx, qy;
+
 def set_timeout(func, sec):
     global t;
     t.cancel();
@@ -80,6 +80,31 @@ def d6r(d):
     """Convert degrees into radians."""
     return math.radians(d)
 
+fileNumber_total=0
+for file_name in os.listdir('images'):
+    for file_name in os.listdir('images/'+str(file_name)):
+        fileNumber_total+=1
+for file_name in os.listdir('planets'):
+    for file_name in os.listdir('planets/'+str(file_name)):
+        fileNumber_total+=1
+
+def progress(count, total, status, name):
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.0 * count / float(total), 1)
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+    pygame.display.update()
+    windowSurface.fill(BLACK)
+    PROGRESS = myfont4.render('[%s] %s%s ...%s/r' + str(bar), 1, GREEN)
+    windowSurface.blit(PROGRESS, (PROGRESS.get_rect(center=(w/2, h/2))))
+    DETAILS = myfont1.render(str(percents) + ' %  ' + str(status) + ' ' + str(name), 1, WHITE)
+    windowSurface.blit(DETAILS, (DETAILS.get_rect(center=(w/2, h/2+h/37))))
+
+current = 0
+def currentUpdate():
+    global current;
+    current+=1;
 images = []
 fileNumber_expl=-1
 for file_name in os.listdir('images'):
@@ -92,12 +117,11 @@ for file_name in os.listdir('images'):
         image = pygame.image.load('images/' + sub1 + '/' + str(i) + '.' + fileN[len(fileN)-3] + fileN[len(fileN)-2] + fileN[len(fileN)-1]).convert()
         images[int(sub1)].append(image)
         i+=1
+        currentUpdate()
+        progress(current, fileNumber_total, image, str(i) + '.' + fileN[len(fileN)-3] + fileN[len(fileN)-2] + fileN[len(fileN)-1])
+        time.sleep(0.0001)
 
 planets_images = []
-planets_images.append([])
-planets_images.append([])
-planets_images.append([])
-planets_images.append([])
 planets_images.append([])
 planets_images.append([])
 planets_images.append([])
@@ -116,24 +140,26 @@ fileNumber_plan=-1
 for file_name in os.listdir('planets'):
     sub1=file_name
     fileNumber_plan+=1
+    planets_images.append([])
     i=0
     for file_name in os.listdir('planets/'+str(file_name)):
         fileN = str(file_name)
         image = pygame.image.load('planets/' + sub1 + '/' + str(i) + '.' + fileN[len(fileN)-3] + fileN[len(fileN)-2] + fileN[len(fileN)-1]).convert()
-        str(i) + '.' + fileN[len(fileN)-3] + fileN[len(fileN)-2] + fileN[len(fileN)-1]
         planets_images[int(sub1)].append(image)
         i+=1
-print(fileNumber_plan);
+        currentUpdate()
+        progress(current, fileNumber_total, image, str(i) + '.' + fileN[len(fileN)-3] + fileN[len(fileN)-2] + fileN[len(fileN)-1])
+        time.sleep(0.0001)
 
 class Explosion:
     def __init__(self, x, y, size):
         global fileNumber;
         self.size = size
+        self.frame = 0
         self.list = images[random.randint(0,fileNumber_expl)]
-        self.image = self.list[0]
+        self.image = pygame.transform.scale(self.list[self.frame], (self.size*2, self.size*2))
         self.x = x
         self.y = y
-        self.frame = 0
         self.last_update = pygame.time.get_ticks()
         self.frame_rate = 20
     def update(self):
@@ -173,10 +199,15 @@ class Ship:
         self.last_used = pygame.time.get_ticks()
         self.cooldown = 200
         self.maxSpeed = 12;
+        self.rotate = False;
     def show(self):
         windowSurface.blit(rot_center(self.img, self.angle),(self.x,self.y));
     def move(self):
-        #print(int(self.dirX), int(self.dirY))
+        if (self.rotate and self.angle < 360 and self.speed > 0):
+            self.angle+= 5;
+            self.speed -= 1;
+        else :
+            self.rotate = False;
         if (self.angle > 360):
             self.angle = 0;
         if (self.angle < 0):
@@ -215,9 +246,9 @@ class Ship:
             self.dir = "up";
         elif (self.dirX <= self.maxSpeed/2 and self.dirX >= -self.maxSpeed/2 and self.dirY < 0):
             self.dir = "down";
-        elif (self.dirX <= self.maxSpeed+1 and self.dirX >= -self.maxSpeed/2 and self.dirY <= self.maxSpeed/6 and self.dirY >= -self.maxSpeed/2):
+        elif (self.dirX <= self.maxSpeed+1 and self.dirX >= -self.maxSpeed/2 and self.dirY <= self.maxSpeed/2 and self.dirY >= -self.maxSpeed/2):
             self.dir = "left";
-        elif (self.dirX >= -self.maxSpeed-1 and self.dirX <= -self.maxSpeed/2 and self.dirY <= self.maxSpeed/6 and self.dirY >= -self.maxSpeed/2):
+        elif (self.dirX >= -self.maxSpeed-1 and self.dirX <= -self.maxSpeed/2 and self.dirY <= self.maxSpeed/2 and self.dirY >= -self.maxSpeed/2):
             self.dir = "right";
         return self.dir;
     def shoot(self):
@@ -225,17 +256,18 @@ class Ship:
             now = pygame.time.get_ticks()
             if (now - self.last_used >= self.cooldown):
                 self.last_used = now
-                bullets.append(Bullet(self.x, self.y, self.angle, 15));
+                bullets.append(Bullet(self.x, self.y, self.angle, 20));
     def notControlable(self):
         self.dirX = -self.dirX
         self.dirY = -self.dirY;
     def rotateSetTo(self, boole):
         self.rotate = boole;
 
-asteroids_name = ["1 Ceres", "4 Vesta", "6 Pallas", "10 Hygiea", "704 Interamnia", "56 Europa", "511 Davida",
-"65 Cybele", "15 Eunomia", "3 Juno", "31 Euphrosyne", "664 Hektor", "88 Thisbe", "364 Bamberga", "451 Patienta",
-"536 Herculina", "48 Doris", "375 Ursula", "107 Camilla", "45 Eugenia", "7 Iris", "69 Amphirite", "463 Diotima",
-"19 Fortuna", "13 Egeria", "64 Themis", "94 Aurora", "706, Alauda", "161 Hermione", "Aletheia", "376 Palma", "168 Nemenios"]
+asteroids_name = ["1 Ceres", "4 Vesta", "2 Pallas", "10 Hygiea", "704 Interamnia", "52 Europa", "511 Davida",
+"65 Cybele", "15 Eunomia", "3 Juno", "31 Euphrosyne", "624 Hektor", "88 Thisbe", "324 Bamberga", "451 Patienta",
+"532 Herculina", "48 Doris", "375 Ursula", "107 Camilla", "45 Eugenia", "7 Iris", "29 Amphirite", "423 Diotima",
+"19 Fortuna", "13 Egeria", "24 Themis", "94 Aurora", "702, Alauda", "121 Hermione", "Aletheia", "372 Palma", "128 Nemenios"]
+
 class Asteroid:
     def __init__(self, x, y, size):
         self.x = x;
@@ -246,7 +278,6 @@ class Asteroid:
         self.maxlife = int(size/20)
         self.life = self.maxlife
         self.dist = 1;
-        self.toDisplay='Required'
         # generation des variables aleatoires
         self.nbrRandom = [];
         for i in range(16):
@@ -362,12 +393,11 @@ class Asteroid:
 
             dx, dy = dx / self.dist, dy / self.dist
             # move along this normalized vector towards the player at current speed
-            self.x += -100 * (dx / self.size)
-            self.y += -100 * (dy / self.size)
+            self.x += -200 * (dx / self.size)
+            self.y += -200 * (dy / self.size)
     def health(self):
         if (self.maxlife > 1):
             health = (self.life * self.size / self.maxlife)
-            #health = (self.life * self.size / self.maxlife)/10
             pygame.draw.rect(windowSurface, GREEN, (self.mostInLeft, self.bestY, health*(self.mostInRight-self.mostInLeft)/70,  self.size/3))
 
 class Planet:
@@ -387,7 +417,7 @@ class Planet:
     def update(self):
         now = pygame.time.get_ticks()
         # Différence des x et différence des y
-        dx, dy = (self.x)*2 - ship.x, (self.y)*6 - ship.y
+        dx, dy = (self.x)*2 - ship.x, (self.y)*2 - ship.y
         # On cherche l'hypoténuse du triangle formé par dx et dy
         self.dist = math.hypot(dx, dy)
         dx, dy = dx / self.dist, dy / self.dist
@@ -401,8 +431,8 @@ class Planet:
                 self.frame += 1
                 if (self.frame == len(self.list)):
                     self.frame = 0
+                print(self.frame)
                 self.image= pygame.transform.scale(self.list[self.frame], (self.size_X, self.size_Y))
-
 class Star:
     def __init__(self, x, y, z):
         self.x = x;
@@ -673,6 +703,8 @@ while True:
                 pressed_left = True;
             if event.key == pygame.K_SPACE:
                 pressed_bar = True;
+            if event.key == pygame.K_ESCAPE:
+                event.type = QUIT;
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_UP:
@@ -686,6 +718,7 @@ while True:
             if event.key == pygame.K_SPACE:
                 pressed_bar = False;
         if event.type == QUIT:
+            pygame.display.quit()
             pygame.quit()
             sys.exit()
     scoretext = myfont2.render("SCORE  "+str(round(score)), 1, WHITE)
