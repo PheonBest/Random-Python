@@ -198,7 +198,7 @@ class Ship:
         self.dirY = 0;
         self.last_used = pygame.time.get_ticks()
         self.cooldown = 200
-        self.maxSpeed = 12;
+        self.maxSpeed = 120;
         self.rotate = False;
         self.altitude = 0;
     def show(self):
@@ -414,11 +414,12 @@ class Planet:
         img_size = self.image.get_size()
         self.size_X = int(img_size[0]*(self.size/img_size[0]))
         self.size_Y = int(img_size[1]*(self.size/img_size[0]))
+        self.image = self.image= pygame.transform.scale(self.image, (self.size_X, self.size_Y))
         self.x = x
         self.y = y
         self.frame = 0
         self.last_update = pygame.time.get_ticks()
-        self.frame_rate = 30
+        self.frame_rate = 20
     def update(self):
         now = pygame.time.get_ticks()
         # Différence des x et différence des y
@@ -433,9 +434,10 @@ class Planet:
             windowSurface.blit(self.image,(self.x,self.y));
             if now - self.last_update > self.frame_rate:
                 self.last_update = now
-                self.frame += 1
-                if (self.frame == len(self.list)):
+                if (self.frame == len(self.list)-1):
                     self.frame = 0
+                else:
+                    self.frame += 1
                 self.image= pygame.transform.scale(self.list[self.frame], (self.size_X, self.size_Y))
 class Star:
     def __init__(self, x, y, z):
@@ -498,15 +500,17 @@ class Ground:
             self.posY.append(5*h/6+random.randint(-5, 5))
 
     def show(self):
-        if self.posY[0]-70<= h/2:
-            ship.speed = -1*ship.speed;
         for i in range(len(self.posX)):
             if (self.posX[i] > w):
                 self.posX[i] = 0
-            if (self.posX[i] < 0):
+            elif (self.posX[i] < 0):
                 self.posX[i] = w;
+        if self.posY[0]-75<=h:
+            if self.posY[0]-70<= h/2:
+                ship.speed = -1*ship.speed;
             try:
-                pygame.draw.circle(windowSurface, (255, 255, 255), (int(self.posX[i]), int(self.posY[i])), 3)
+                for i in range(len(self.posX)):
+                    pygame.draw.circle(windowSurface, (255, 255, 255), (int(self.posX[i]), int(self.posY[i])), 3)
             except:
                 pass;
         # pygame.draw.polygon(windowSurface, [255, 255, 255], [[0, h], [w/2, h-100], [w, h]], 5)
@@ -571,7 +575,7 @@ while True:
     if (ship.altitude > 3000 and len(stars) < 100):
          stars.append(Star(random.randint(0, w), random.randint(0, h), random.randint(1, 140)))
     if (ship.altitude > 10000 and len(planets) < 80):
-        planets.append(Planet(random.randint(-w*50, w*50), random.randint(-h*100, -h*4), random.randint(500, 1000)));
+        planets.append(Planet(random.randint(-w*50, w*50), random.randint(-h*100, -h*4), random.randint(500, 800)));
 
     for i in range(len(explosions)):
         explosions[i].update();
